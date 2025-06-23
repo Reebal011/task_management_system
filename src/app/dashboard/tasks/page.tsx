@@ -143,11 +143,9 @@ export default function TaskListPage() {
               </button>
             )}
             <button
-              className={
-                isUserAdmin
-                  ? "ml-2"
-                  : "mt-2  bg-green-500 text-white px-2 py-0.5 text-sm rounded hover:bg-green-600"
-              }
+              className={`bg-green-500 text-white px-2 py-0.5 text-sm rounded hover:bg-green-600 mt-2 ${
+                isUserAdmin ? "ml-2" : ""
+              }`}
             >
               <Link href={`/dashboard/tasks/${task.id}/edit`}>Edit</Link>
             </button>
