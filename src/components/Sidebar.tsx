@@ -2,16 +2,43 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuthStore();
 
-  const links = [
+  // Debug logging
+  console.log("🔍 Sidebar - User:", user);
+  console.log("🔍 Sidebar - User role:", user?.role);
+
+  // Base links that all authenticated users can see
+  const baseLinks = [
     { name: "Dashboard", href: "/dashboard" },
     { name: "Tasks", href: "/dashboard/tasks" },
-    { name: "Admin", href: "/dashboard/admin" },
-    { name: "User", href: "/dashboard/user" },
   ];
+
+  // Role-specific links
+  const adminLinks = [{ name: "Admin", href: "/dashboard/admin" }];
+
+  const userLinks = [{ name: "User", href: "/dashboard/user" }];
+
+  // Combine links based on user role - STRICT separation
+  let links = [...baseLinks];
+
+  if (user?.role === "admin") {
+    console.log("✅ Adding admin links only");
+    // Admins can ONLY see admin routes
+    links = [...links, ...adminLinks];
+  } else if (user?.role === "user") {
+    console.log("✅ Adding user links only");
+    // Regular users can ONLY see user routes
+    links = [...links, ...userLinks];
+  } else {
+    console.log("❌ No role match found");
+  }
+
+  console.log("🔍 Final links:", links);
 
   const isLinkActive = (href: string) => {
     if (href === "/dashboard") {

@@ -8,7 +8,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"Admin" | "User">("User");
+  const [role, setRole] = useState<"admin" | "user">("user");
   const [error, setError] = useState("");
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -46,10 +46,10 @@ export default function RegisterPage() {
         <select
           className="w-full border p-2 rounded"
           value={role}
-          onChange={(e) => setRole(e.target.value as "Admin" | "User")}
+          onChange={(e) => setRole(e.target.value as "admin" | "user")}
         >
-          <option value="User">User</option>
-          <option value="Admin">Admin</option>
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
         </select>
         <button
           type="submit"

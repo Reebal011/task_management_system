@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import API from "@/lib/axios";
+import { User } from "@/types/task";
+import { useState, useEffect } from "react";
 import { Task } from "@/types/task";
-import { User } from "@/types/user";
 
 export enum TaskStatus {
   TODO = "todo",
@@ -19,93 +20,104 @@ export default function EditTaskPage() {
   const { taskId } = useParams();
   const router = useRouter();
 
-  const [task, setTask] = useState<Task | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [taskState, setTaskState] = useState<Task | null>(null);
+  const [usersState, setUsersState] = useState<User[]>([]);
 
-  const fetchTask = async () => {
-    try {
+  const queryClient = useQueryClient();
+
+  const { data: task, isLoading: taskLoading } = useQuery({
+    queryKey: ["task", taskId],
+    queryFn: async () => {
       const res = await API.get(`/tasks/${taskId}`);
-      setTask(res.data);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to fetch task");
-    } finally {
-      setLoading(false);
-    }
-  };
+      return res.data;
+    },
+    enabled: !!taskId,
+  });
 
-  const fetchUsers = async () => {
-    try {
+  const { data: users = [], isLoading: usersLoading } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
       const res = await API.get("/users");
-      setUsers(res.data);
-    } catch {
-      console.warn("Could not load users");
-    }
-  };
+      return res.data as User[];
+    },
+  });
 
   useEffect(() => {
-    if (taskId) {
-      fetchTask();
-      fetchUsers();
-    }
-  }, [taskId]);
+    if (task && !taskState) setTaskState(task);
+  }, [task, taskState]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!task) return;
+  useEffect(() => {
+    if (users.length > 0 && usersState.length === 0) setUsersState(users);
+  }, [users, usersState]);
 
-    try {
-      const res = await API.patch(`/tasks/${taskId}`, {
-        title: task.title,
-        description: task.description,
-        assignedToId: task.assignedTo.id,
-        status: task.status,
-      });
-      console.log("handleSubmit", res);
+  const updateTaskMutation = useMutation({
+    mutationFn: async (updatedTask: any) => {
+      const res = await API.patch(`/tasks/${taskId}`, updatedTask);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task", taskId] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
       router.push("/dashboard/tasks");
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       setError(err?.response?.data?.message || "Failed to update task");
-    }
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskState) return;
+    updateTaskMutation.mutate({
+      title: taskState.title,
+      description: taskState.description,
+      assignedToId: taskState.assignedTo.id,
+      status: taskState.status,
+    });
   };
 
   const handleAssigneeChange = (id: string) => {
-    console.log("id", id);
-    const selectedUser = users.find((u) => u.id === id);
-    if (!selectedUser) return; // avoid undefined assignment
-    console.log("selectedUser", selectedUser);
-    setTask({ ...task, assignedTo: selectedUser as User });
+    if (!taskState) return;
+    const selectedUser = usersState.find((u: User) => u.id === id);
+    if (!selectedUser) return;
+    setTaskState({ ...taskState, assignedTo: { ...selectedUser } });
   };
 
-  if (loading) return <p className="text-black">Loading...</p>;
+  if (taskLoading || usersLoading || !taskState)
+    return <p className="text-black">Loading...</p>;
 
   return (
     <div className="max-w-xl mx-auto p-6 bg-white shadow rounded">
       <h1 className="text-2xl font-bold mb-4 text-black">Edit Task</h1>
       {error && <p className="text-red-500 mb-4">{error}</p>}
-      {task && (
+      {taskState && (
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
             className="w-full border p-2 rounded text-black border-gray-400"
-            value={task.title}
-            onChange={(e) => setTask({ ...task, title: e.target.value })}
+            value={taskState.title}
+            onChange={(e) =>
+              setTaskState({ ...taskState, title: e.target.value })
+            }
             required
           />
           <textarea
             className="w-full border p-2 rounded text-black border-gray-400"
-            value={task.description}
-            onChange={(e) => setTask({ ...task, description: e.target.value })}
+            value={taskState.description}
+            onChange={(e) =>
+              setTaskState({ ...taskState, description: e.target.value })
+            }
             required
           />
 
           <select
             className="w-full border p-2 rounded text-black border-gray-400"
-            value={task.assignedTo?.id || ""}
+            value={taskState.assignedTo?.id || ""}
             onChange={(e) => handleAssigneeChange(e.target.value)}
           >
             <option value="">Unassigned</option>
-            {users.map((user) => (
+            {usersState.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.name} | {user.role}
               </option>
@@ -114,9 +126,12 @@ export default function EditTaskPage() {
 
           <select
             className="w-full border p-2 rounded text-black border-gray-400"
-            value={task.status}
+            value={taskState.status}
             onChange={(e) =>
-              setTask({ ...task, status: e.target.value as TaskStatus })
+              setTaskState({
+                ...taskState,
+                status: e.target.value as TaskStatus,
+              })
             }
           >
             <option value={TaskStatus.TODO}>To Do</option>

@@ -11,6 +11,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { EventLog, EventLogDocument } from '../event-log/event-log.schema';
 import { TaskGateway } from '../gateway/task.gateway';
+import redisClient from 'src/redis';
 
 @Injectable()
 export class TasksService {
@@ -60,26 +61,40 @@ export class TasksService {
     } catch (err) {
       console.error('WebSocket Emit Error:', err.message);
     }
+    // Invalidate cache
+    await redisClient.del('tasks:all');
     return task;
   }
 
   async getAllTasks(requestingUser: User) {
+    const cacheKey = `tasks:all:${requestingUser.role}:${requestingUser.id}`;
+    const cached = await redisClient.get(cacheKey);
+    if (cached) return JSON.parse(cached);
+    let tasks;
     if (requestingUser.role === 'admin') {
-      return this.taskRepo.find({ relations: ['createdBy', 'assignedTo'] });
+      tasks = await this.taskRepo.find({
+        relations: ['createdBy', 'assignedTo'],
+      });
     } else {
-      return this.taskRepo.find({
+      tasks = await this.taskRepo.find({
         where: [{ assignedTo: { id: requestingUser.id } }],
         relations: ['createdBy', 'assignedTo'],
       });
     }
+    await redisClient.set(cacheKey, JSON.stringify(tasks), { EX: 60 }); // cache for 60s
+    return tasks;
   }
 
   async getTaskById(id: string) {
+    const cacheKey = `tasks:one:${id}`;
+    const cached = await redisClient.get(cacheKey);
+    if (cached) return JSON.parse(cached);
     const task = await this.taskRepo.findOne({
       where: { id },
       relations: ['createdBy', 'assignedTo'],
     });
     if (!task) throw new NotFoundException('Task not found');
+    await redisClient.set(cacheKey, JSON.stringify(task), { EX: 60 });
     return task;
   }
 
@@ -111,7 +126,12 @@ export class TasksService {
       updatedBy?.id ?? '',
     );
     await this.gateway.emitTaskUpdate('taskUpdated', task);
-
+    // Invalidate cache immediately for all users
+    const keys = await redisClient.keys('tasks:all:*');
+    if (keys.length > 0) {
+      await Promise.all(keys.map((key: string) => redisClient.del(key)));
+    }
+    await redisClient.del(`tasks:one:${id}`);
     return task;
   }
 
@@ -135,7 +155,12 @@ export class TasksService {
     );
 
     await this.gateway.emitTaskUpdate('taskDeleted', task);
-
+    // Invalidate cache immediately for all users
+    const keys = await redisClient.keys('tasks:all:*');
+    if (keys.length > 0) {
+      await Promise.all(keys.map((key: string) => redisClient.del(key)));
+    }
+    await redisClient.del(`tasks:one:${id}`);
     return { message: 'Task deleted' };
   }
 

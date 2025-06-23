@@ -1,16 +1,16 @@
 import { useAuthStore } from "@/store/authStore";
 
-export const checkRole = (requiredRole: "Admin" | "User"): boolean => {
+export const checkRole = (requiredRole: "admin" | "user"): boolean => {
   const user = useAuthStore.getState().user;
   return user?.role === requiredRole;
 };
 
 export const isAdmin = (): boolean => {
-  return checkRole("Admin");
+  return checkRole("admin");
 };
 
 export const isUser = (): boolean => {
-  return checkRole("User");
+  return checkRole("user");
 };
 
 export const getCurrentUser = () => {
