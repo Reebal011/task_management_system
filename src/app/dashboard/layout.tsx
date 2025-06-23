@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import Sidebar from "@/components/Sidebar";
@@ -13,6 +13,7 @@ export default function DashboardLayout({
 }) {
   const { token, setAuth } = useAuthStore();
   const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -32,10 +33,17 @@ export default function DashboardLayout({
   }, [token, setAuth, router]);
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
+    <div className="flex min-h-screen relative">
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 z-30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Sidebar backdrop"
+        />
+      )}
       <div className="flex flex-col flex-1">
-        <Topbar />
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
         <main className="p-6 bg-gray-100 flex-1">{children}</main>
       </div>
     </div>

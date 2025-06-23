@@ -89,8 +89,8 @@ export default function TaskListPage() {
     );
 
   return (
-    <div>
-      <div className="flex justify-between">
+    <div className="w-full max-w-5xl mx-auto p-2 sm:p-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-0">
         <h1 className="text-2xl font-bold mb-4 text-black">Your Tasks</h1>
         {isUserAdmin && (
           <Link
@@ -101,11 +101,11 @@ export default function TaskListPage() {
           </Link>
         )}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-x-auto">
         {tasks.map((task: any) => (
           <div
             key={task.id}
-            className="bg-white p-4 rounded shadow hover:shadow-lg transition relative"
+            className="bg-white p-4 rounded shadow hover:shadow-lg transition relative min-w-[260px]"
           >
             <h2 className="font-semibold text-gray-900">{task.title}</h2>
             <p className="text-sm text-gray-600">{task.description}</p>
