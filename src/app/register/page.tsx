@@ -10,11 +10,12 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
   const [error, setError] = useState("");
+  const [name, setName] = useState("");
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await API.post("/auth/register", { email, password, role });
+      await API.post("/auth/register", { name, email, password, role });
       router.push("/login"); // Redirect to login
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
@@ -27,6 +28,14 @@ export default function RegisterPage() {
       <form onSubmit={handleRegister} className="w-full max-w-sm space-y-4">
         <h1 className="text-2xl font-bold">Register</h1>
         {error && <p className="text-red-500">{error}</p>}
+        <input
+          type="text"
+          placeholder="Name"
+          className="w-full border p-2 rounded"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
         <input
           type="email"
           placeholder="Email"

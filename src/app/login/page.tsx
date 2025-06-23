@@ -8,8 +8,8 @@ import API from "@/lib/axios";
 export default function LoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const [email, setEmail] = useState("reebal@example.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -29,7 +29,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
         <h1 className="text-2xl font-bold">Login</h1>
         {error && <p className="text-red-500">{error}</p>}
@@ -56,6 +56,12 @@ export default function LoginPage() {
           Login
         </button>
       </form>
+      <div className="w-full max-w-sm mt-4 text-center">
+        <span>Don&apos;t have an account? </span>
+        <a href="/register" className="text-blue-600 hover:underline">
+          Sign up
+        </a>
+      </div>
     </div>
   );
 }
